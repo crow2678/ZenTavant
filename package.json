@@ -1,0 +1,32 @@
+{
+  "name": "tavant-docs-mcp",
+  "version": "1.0.0",
+  "description": "MCP server for creating Tavant corporate documents — presentations, contracts, and SOWs",
+  "main": "index.js",
+  "bin": {
+    "tavant-docs-mcp": "./index.js"
+  },
+  "scripts": {
+    "start": "node index.js",
+    "test": "node test-e2e.js"
+  },
+  "keywords": [
+    "mcp",
+    "pptx",
+    "docx",
+    "contract",
+    "sow",
+    "tavant"
+  ],
+  "author": "Tavant",
+  "license": "ISC",
+  "type": "commonjs",
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.27.1",
+    "docx": "^9.6.1",
+    "jszip": "^3.10.1",
+    "pptxgenjs": "^4.0.1",
+    "uuid": "^13.0.0",
+    "zod": "^3.25.76"
+  }
+}
