@@ -1,10 +1,10 @@
 {
-  "name": "tavant-docs-mcp",
+  "name": "tavant-universe",
   "version": "1.0.0",
-  "description": "MCP server for creating Tavant corporate documents — presentations, contracts, and SOWs",
+  "description": "MCP server for creating Tavant corporate documents — presentations, contracts, SOWs, NDAs, CRs, and MSAs",
   "main": "index.js",
   "bin": {
-    "tavant-docs-mcp": "./index.js"
+    "tavant-universe": "./index.js"
   },
   "scripts": {
     "start": "node index.js",

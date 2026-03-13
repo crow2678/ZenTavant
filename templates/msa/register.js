@@ -157,7 +157,7 @@ function register(server) {
       const sanitized = (msa.customer_name || "MSA").replace(/[^a-zA-Z0-9_-]/g, "_").substring(0, 50);
       const defaultDir = path.join(process.cwd(), "output");
       if (!fs.existsSync(defaultDir)) fs.mkdirSync(defaultDir, { recursive: true });
-      const filePath = output_path || path.join(defaultDir, `MSA_${sanitized}.docx`);
+      const filePath = output_path ? path.resolve(output_path) : path.join(defaultDir, `MSA_${sanitized}.docx`);
       const dir = path.dirname(filePath);
       if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
       fs.writeFileSync(filePath, buffer);

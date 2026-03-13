@@ -153,7 +153,7 @@ function register(server) {
       const sanitized = (sow.project_name || "sow").replace(/[^a-zA-Z0-9_-]/g, "_").substring(0, 50);
       const defaultDir = path.join(process.cwd(), "output");
       if (!fs.existsSync(defaultDir)) fs.mkdirSync(defaultDir, { recursive: true });
-      const filePath = output_path || path.join(defaultDir, `SOW_${sanitized}.docx`);
+      const filePath = output_path ? path.resolve(output_path) : path.join(defaultDir, `SOW_${sanitized}.docx`);
       const dir = path.dirname(filePath);
       if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
       fs.writeFileSync(filePath, buffer);
