@@ -29,8 +29,22 @@ function addChromeToSlide(slide, isDark) {
   });
 }
 
+// ─── Dark background detection helper ────────────────────────────────────
+function isDarkColor(hex) {
+  if (!hex) return false;
+  hex = hex.replace("#", "");
+  const r = parseInt(hex.substring(0, 2), 16);
+  const g = parseInt(hex.substring(2, 4), 16);
+  const b = parseInt(hex.substring(4, 6), 16);
+  // Luminance formula: dark if below ~40% brightness
+  return (r * 0.299 + g * 0.587 + b * 0.114) < 100;
+}
+
 // ─── Shared element renderer (used by single + batch tools) ──────────────
-function addElementToSlide(slide, pptx, element_type, props) {
+function addElementToSlide(slide, pptx, element_type, props, slideBgColor) {
+  // Auto-detect if chart/text needs light colors for contrast
+  const onDarkBg = isDarkColor(slideBgColor || props._bgColor || "FFFFFF");
+
   switch (element_type) {
     case "text": {
       const textContent = props.text || "";
@@ -74,14 +88,43 @@ function addElementToSlide(slide, pptx, element_type, props) {
         area: pptx.ChartType.area,
       };
       const chartType = chartTypeMap[props.chartType || "bar"];
+
+      // Auto-contrast: if chart sits on dark background, use light text
+      const labelColor = props.labelColor || (onDarkBg ? "DDDDDD" : "333333");
+      const axisLineColor = props.axisLineColor || (onDarkBg ? "555555" : "CCCCCC");
+      const gridLineColor = props.gridLineColor || (onDarkBg ? "3A3A3A" : "E0E0E0");
+
       const chartOpts = {
         x: props.x || 0.5, y: props.y || 1.5,
         w: props.w || 6, h: props.h || 4,
         showValue: props.showValue !== undefined ? props.showValue : true,
         showLegend: props.showLegend || false,
         legendPos: props.legendPos || "b",
+        // Axis label contrast colors
+        catAxisFontSize: props.catAxisFontSize || 11,
+        valAxisFontSize: props.valAxisFontSize || 10,
+        dataLabelFontSize: props.dataLabelFontSize || 10,
+        catAxisLabelColor: labelColor,
+        valAxisLabelColor: labelColor,
+        dataLabelColor: labelColor,
+        catAxisFontFace: BRAND.font,
+        valAxisFontFace: BRAND.font,
+        dataLabelFontFace: BRAND.font,
+        // Axis line colors
+        catAxisLineColor: axisLineColor,
+        valAxisLineColor: axisLineColor,
+        // Grid lines
+        valGridLine: { color: gridLineColor, size: 1 },
+        // Legend
+        legendFontSize: props.legendFontSize || 10,
+        legendColor: labelColor,
+        legendFontFace: BRAND.font,
       };
       if (props.chartColors) chartOpts.chartColors = props.chartColors;
+      if (props.catAxisOrientation) chartOpts.catAxisOrientation = props.catAxisOrientation;
+      if (props.valAxisOrientation) chartOpts.valAxisOrientation = props.valAxisOrientation;
+      if (props.catAxisHidden) chartOpts.catAxisHidden = props.catAxisHidden;
+      if (props.valAxisHidden) chartOpts.valAxisHidden = props.valAxisHidden;
       slide.addChart(chartType, props.data || [], chartOpts);
       break;
     }
@@ -241,9 +284,9 @@ function register(server) {
       addChromeToSlide(slide, isDark);
 
       pres.slideCount++;
-      // Store the slide reference for adding elements
+      // Store the slide reference + background color for contrast detection
       if (!pres.slides) pres.slides = {};
-      pres.slides[pres.slideCount] = slide;
+      pres.slides[pres.slideCount] = { slide, bgColor };
 
       return {
         content: [{
@@ -293,11 +336,11 @@ TABLE: {x, y, w, h, rows (2D array of cell values), colW (array of column widths
     async ({ presentation_id, slide_index, element_type, props }) => {
       const pres = presentations.get(presentation_id);
       if (!pres) return { content: [{ type: "text", text: "Error: Presentation not found." }], isError: true };
-      const slide = pres.slides && pres.slides[slide_index];
-      if (!slide) return { content: [{ type: "text", text: `Error: Slide ${slide_index} not found. Use pptx_add_custom_slide first.` }], isError: true };
+      const slideRef = pres.slides && pres.slides[slide_index];
+      if (!slideRef) return { content: [{ type: "text", text: `Error: Slide ${slide_index} not found. Use pptx_add_custom_slide first.` }], isError: true };
 
       try {
-        addElementToSlide(slide, pres.pptx, element_type, props);
+        addElementToSlide(slideRef.slide, pres.pptx, element_type, props, slideRef.bgColor);
         return {
           content: [{ type: "text", text: JSON.stringify({ message: `${element_type} element added to slide ${slide_index}` }) }],
         };
@@ -322,15 +365,15 @@ TABLE: {x, y, w, h, rows (2D array of cell values), colW (array of column widths
     async ({ presentation_id, slide_index, elements }) => {
       const pres = presentations.get(presentation_id);
       if (!pres) return { content: [{ type: "text", text: "Error: Presentation not found." }], isError: true };
-      const slide = pres.slides && pres.slides[slide_index];
-      if (!slide) return { content: [{ type: "text", text: `Error: Slide ${slide_index} not found. Use pptx_add_custom_slide first.` }], isError: true };
+      const slideRef = pres.slides && pres.slides[slide_index];
+      if (!slideRef) return { content: [{ type: "text", text: `Error: Slide ${slide_index} not found. Use pptx_add_custom_slide first.` }], isError: true };
 
       const errors = [];
       let added = 0;
       for (let i = 0; i < (elements || []).length; i++) {
         const { type, props } = elements[i];
         try {
-          addElementToSlide(slide, pres.pptx, type, props);
+          addElementToSlide(slideRef.slide, pres.pptx, type, props, slideRef.bgColor);
           added++;
         } catch (err) {
           errors.push(`Element ${i} (${type}): ${err.message}`);
