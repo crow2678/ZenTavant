@@ -1,4 +1,16 @@
 const path = require("path");
+const os = require("os");
+const fs = require("fs");
+
+// Cross-platform output directory: ~/Documents/TavantDocs
+function getOutputDir() {
+  const home = os.homedir();
+  const docsDir = path.join(home, "Documents", "TavantDocs");
+  if (!fs.existsSync(docsDir)) {
+    fs.mkdirSync(docsDir, { recursive: true });
+  }
+  return docsDir;
+}
 
 const BRAND = {
   colors: {
@@ -16,6 +28,7 @@ const BRAND = {
   logo: {
     path: path.join(__dirname, "assets", "tavant-logo.png"),
   },
+  getOutputDir,
 };
 
 module.exports = BRAND;
