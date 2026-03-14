@@ -1,6 +1,6 @@
 {
   "name": "tavant-universe",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "description": "MCP server for creating Tavant corporate documents — presentations, contracts, SOWs, NDAs, CRs, and MSAs",
   "main": "index.js",
   "bin": {
