@@ -62,9 +62,36 @@ server.tool(
           "Contracts: include at minimum parties, scope_of_work, commercial_terms, signatures",
           "SOWs: include at minimum cover_page, overview, scope, deliverables, pricing, signatures",
         ],
+        pptx_optimization: [
+          "ALWAYS prefer pptx_add_slide (1 tool call) over pptx_add_custom_slide + elements when a template layout fits",
+          "Plan ALL slides upfront before making any tool calls — decide layouts first, then execute in one pass",
+          "Use content/title_subtitle_content for bullet lists, image_content_a for content+image, image_grid for 6-item grids, three_column_images for 3 features",
+          "Only use pptx_add_custom_slide for step-by-step instructions or layouts no template covers",
+          "Keep agenda items under 40 characters — pass as clean string array",
+          "Pass body as string array ['item 1', 'item 2'] not one long string",
+          "For custom slides: use rich text arrays and tables to minimize pptx_add_element calls",
+          "Read knowledge://pptx-best-practices for the full layout selection guide",
+        ],
       }, null, 2),
     }],
   })
+);
+
+// Knowledge resource: PPTX best practices
+server.resource(
+  "pptx-best-practices",
+  "knowledge://pptx-best-practices",
+  "PPTX generation best practices — layout selection guide, tool optimization, content-to-layout mapping. ALWAYS read this before creating presentations.",
+  async (uri) => {
+    const bp = fs.readFileSync(path.join(KNOWLEDGE_DIR, "pptx-best-practices.md"), "utf-8");
+    return {
+      contents: [{
+        uri: uri.href,
+        mimeType: "text/markdown",
+        text: bp,
+      }],
+    };
+  }
 );
 
 // Knowledge resource: Tavant company context
