@@ -75,10 +75,10 @@ const slideBuilders = {
       x: 0.46, y: 6.30, w: 5.0, h: 0.30,
       fontSize: 10, color: BRAND.colors.orange, fontFace: BRAND.font,
     });
-    // Title (up to 3 lines)
+    // Title (up to 3 lines) — WHITE text on dark background
     slide.addText(data.title || "PRESENTATION TITLE", {
       x: 0.49, y: 1.91, w: 6.02, h: 1.75,
-      fontSize: 40, bold: true, color: BRAND.colors.black, fontFace: BRAND.font,
+      fontSize: 40, bold: true, color: BRAND.colors.white, fontFace: BRAND.font,
     });
     // Subtitle
     if (data.subtitle) {
@@ -91,7 +91,7 @@ const slideBuilders = {
     if (data.date) {
       slide.addText(data.date, {
         x: 0.49, y: 4.67, w: 6.02, h: 0.39,
-        fontSize: 18, color: BRAND.colors.black, fontFace: BRAND.font,
+        fontSize: 18, color: BRAND.colors.white, fontFace: BRAND.font,
       });
     }
   },
@@ -125,13 +125,13 @@ const slideBuilders = {
       x: 0.40, y: 0.39, w: 3.09, h: 0.79,
       fontSize: 24, bold: true, color: BRAND.colors.orange, fontFace: BRAND.font,
     });
-    // Numbered items
+    // Numbered items — each on its own line with spacing
     const items = data.items || [];
     const itemTexts = items.map((item, i) => ({
       text: `${String(i + 1).padStart(2, "0")}  ${item}`,
       options: {
         fontSize: 20, bold: true, color: BRAND.colors.orange, fontFace: BRAND.font,
-        paraSpaceAfter: 14, bullet: false,
+        paraSpaceBefore: 6, paraSpaceAfter: 14, bullet: false, breakLine: true,
       },
     }));
     slide.addText(itemTexts, {
@@ -176,7 +176,7 @@ const slideBuilders = {
       const bodyItems = Array.isArray(data.body)
         ? data.body.map(b => ({
             text: b,
-            options: { fontSize: 18, color: "FF8909", fontFace: BRAND.font, bullet: { type: "bullet", color: "FF8909" }, paraSpaceAfter: 8 },
+            options: { fontSize: 18, color: "FF8909", fontFace: BRAND.font, bullet: { type: "bullet", color: "FF8909" }, paraSpaceBefore: 4, paraSpaceAfter: 12, breakLine: true },
           }))
         : [{ text: data.body, options: { fontSize: 18, color: "FF8909", fontFace: BRAND.font } }];
       slide.addText(bodyItems, { x: 0.36, y: 1.07, w: 12.62, h: 5.58, valign: "top" });
@@ -193,7 +193,7 @@ const slideBuilders = {
       const bodyItems = Array.isArray(data.body)
         ? data.body.map(b => ({
             text: b,
-            options: { fontSize: 18, color: BRAND.colors.darkGray, fontFace: BRAND.font, bullet: { type: "bullet", color: "FF8909" }, paraSpaceAfter: 8 },
+            options: { fontSize: 18, color: BRAND.colors.darkGray, fontFace: BRAND.font, bullet: { type: "bullet", color: "FF8909" }, paraSpaceBefore: 4, paraSpaceAfter: 12, breakLine: true },
           }))
         : [{ text: data.body, options: { fontSize: 18, color: BRAND.colors.darkGray, fontFace: BRAND.font } }];
       slide.addText(bodyItems, { x: 0.36, y: 1.07, w: 12.62, h: 5.58, valign: "top" });
@@ -222,7 +222,7 @@ const slideBuilders = {
       if (Array.isArray(content)) {
         return content.map(b => ({
           text: b,
-          options: { fontSize: 18, color: BRAND.colors.darkGray, fontFace: BRAND.font, bullet: { type: "bullet", color: "FF8909" }, paraSpaceAfter: 8 },
+          options: { fontSize: 18, color: BRAND.colors.darkGray, fontFace: BRAND.font, bullet: { type: "bullet", color: "FF8909" }, paraSpaceBefore: 4, paraSpaceAfter: 12, breakLine: true },
         }));
       }
       return [{ text: content, options: { fontSize: 18, color: BRAND.colors.darkGray, fontFace: BRAND.font } }];
@@ -243,7 +243,7 @@ const slideBuilders = {
       const bodyItems = Array.isArray(data.body)
         ? data.body.map(b => ({
             text: b,
-            options: { fontSize: 18, color: BRAND.colors.darkGray, fontFace: BRAND.font, bullet: { type: "bullet", color: "FF8909" }, paraSpaceAfter: 8 },
+            options: { fontSize: 18, color: BRAND.colors.darkGray, fontFace: BRAND.font, bullet: { type: "bullet", color: "FF8909" }, paraSpaceBefore: 4, paraSpaceAfter: 12, breakLine: true },
           }))
         : [{ text: data.body, options: { fontSize: 18, color: BRAND.colors.darkGray, fontFace: BRAND.font } }];
       slide.addText(bodyItems, { x: 0.35, y: 1.38, w: 12.63, h: 5.30, valign: "top" });
@@ -311,7 +311,7 @@ const slideBuilders = {
       const bodyItems = Array.isArray(data.body)
         ? data.body.map(b => ({
             text: b,
-            options: { fontSize: 18, color: BRAND.colors.darkGray, fontFace: BRAND.font, bullet: { type: "bullet", color: "FF8909" }, paraSpaceAfter: 8 },
+            options: { fontSize: 18, color: BRAND.colors.darkGray, fontFace: BRAND.font, bullet: { type: "bullet", color: "FF8909" }, paraSpaceBefore: 4, paraSpaceAfter: 12, breakLine: true },
           }))
         : [{ text: data.body, options: { fontSize: 18, color: BRAND.colors.darkGray, fontFace: BRAND.font } }];
       slide.addText(bodyItems, { x: 0.39, y: 1.64, w: 6.13, h: 5.01, valign: "top" });
