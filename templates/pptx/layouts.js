@@ -125,7 +125,7 @@ const LAYOUTS = {
     id: "three_column_images",
     name: "3-Column with Images",
     layoutRef: "Layout 19: Images + Content D",
-    description: "Black background, 3 image slots top, 3 numbered topic blocks below. For services/features.",
+    description: "Black background with 3 columns. Each column has: dark box with large semi-transparent number (01/02/03) + orange left accent bar, then a white card below with orange left accent + orange bottom border. Pass columns as [{title, description}]. Title and description render on separate lines automatically.",
     fields: ["title", "subtitle", "columns"],
   },
   chart: {

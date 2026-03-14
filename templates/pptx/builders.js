@@ -260,16 +260,22 @@ const slideBuilders = {
 
     const columns = data.columns || [];
     const xPositions = [0.64, 3.76, 6.88, 10.01];
+    const cardW = 2.95;
     columns.slice(0, 4).forEach((col, i) => {
       const x = xPositions[i];
+      // Orange left accent bar
+      slide.addShape(pptx.ShapeType.rect, {
+        x: x - 0.13, y: 1.46, w: 0.06, h: 5.07,
+        fill: { color: BRAND.colors.orange },
+      });
       // White card background
       slide.addShape(pptx.ShapeType.rect, {
-        x: x - 0.13, y: 1.46, w: 2.95, h: 5.07,
+        x: x - 0.07, y: 1.46, w: cardW - 0.06, h: 5.07,
         fill: { color: BRAND.colors.white }, rectRadius: 0.05,
       });
-      // Orange accent line
+      // Orange bottom border
       slide.addShape(pptx.ShapeType.rect, {
-        x: x + 1.20, y: 5.02, w: 0.07, h: 0.50,
+        x: x - 0.07, y: 6.47, w: cardW - 0.06, h: 0.06,
         fill: { color: BRAND.colors.orange },
       });
       const title = typeof col === "string" ? col : col.title || "";
@@ -277,13 +283,13 @@ const slideBuilders = {
       // Text content
       const textItems = [];
       if (title) {
-        textItems.push({ text: title, options: { fontSize: 14, bold: true, color: BRAND.colors.black, fontFace: BRAND.font, paraSpaceAfter: 6 } });
+        textItems.push({ text: title, options: { fontSize: 14, bold: true, color: BRAND.colors.black, fontFace: BRAND.font, paraSpaceAfter: 8, breakLine: true } });
       }
       if (desc) {
-        textItems.push({ text: desc, options: { fontSize: 12, color: BRAND.colors.darkGray, fontFace: BRAND.font } });
+        textItems.push({ text: desc, options: { fontSize: 12, color: BRAND.colors.darkGray, fontFace: BRAND.font, breakLine: true } });
       }
       if (textItems.length) {
-        slide.addText(textItems, { x, y: 3.00, w: 2.69, h: 2.59, valign: "top" });
+        slide.addText(textItems, { x, y: 1.60, w: 2.60, h: 4.80, valign: "top" });
       }
     });
     addDarkSlideChrome(slide, pptx);
@@ -404,29 +410,46 @@ const slideBuilders = {
 
     const columns = data.columns || [];
     const xPositions = [0.54, 4.81, 9.07];
+    const cardW = 3.90;
     columns.slice(0, 3).forEach((col, i) => {
       const x = xPositions[i];
-      // Image placeholder
+      // Orange accent bar — LEFT edge of dark box
       slide.addShape(pptx.ShapeType.rect, {
-        x, y: 1.92, w: 3.71, h: 1.94,
+        x, y: 1.52, w: 0.06, h: 2.34,
+        fill: { color: BRAND.colors.orange },
+      });
+      // Dark image placeholder box
+      slide.addShape(pptx.ShapeType.rect, {
+        x: x + 0.06, y: 1.52, w: 3.65, h: 2.34,
         fill: { color: "333333" }, rectRadius: 0.05,
+      });
+      // Large semi-transparent number inside dark box
+      slide.addText(`0${i + 1}`, {
+        x: x + 0.06, y: 1.52, w: 3.65, h: 2.34,
+        fontSize: 72, bold: true, color: "444444", fontFace: BRAND.font,
+        align: "center", valign: "middle",
+      });
+      // Orange accent bar — LEFT edge of white card
+      slide.addShape(pptx.ShapeType.rect, {
+        x, y: 3.96, w: 0.06, h: 2.70,
+        fill: { color: BRAND.colors.orange },
       });
       // White card below
       slide.addShape(pptx.ShapeType.rect, {
-        x: x - 0.09, y: 4.04, w: 3.90, h: 2.26,
+        x: x + 0.06, y: 3.96, w: cardW - 0.06, h: 2.70,
         fill: { color: BRAND.colors.white }, rectRadius: 0.05,
       });
-      // Orange vertical accent
+      // Orange bottom border on white card
       slide.addShape(pptx.ShapeType.rect, {
-        x: x + 1.83, y: 2.12, w: 0.06, h: 3.90,
+        x: x + 0.06, y: 6.60, w: cardW - 0.06, h: 0.06,
         fill: { color: BRAND.colors.orange },
       });
       const t = typeof col === "string" ? { title: col } : col;
       const texts = [];
-      if (t.title) texts.push({ text: `0${i + 1}. ${t.title}`, options: { fontSize: 20, bold: true, color: BRAND.colors.black, fontFace: BRAND.font, paraSpaceAfter: 6 } });
-      if (t.description) texts.push({ text: t.description, options: { fontSize: 14, color: BRAND.colors.darkGray, fontFace: BRAND.font } });
+      if (t.title) texts.push({ text: t.title, options: { fontSize: 18, bold: true, color: BRAND.colors.black, fontFace: BRAND.font, paraSpaceAfter: 8, breakLine: true } });
+      if (t.description) texts.push({ text: t.description, options: { fontSize: 14, color: BRAND.colors.darkGray, fontFace: BRAND.font, breakLine: true } });
       if (texts.length) {
-        slide.addText(texts, { x: x + 0.14, y: 4.28, w: 3.48, h: 1.79, valign: "top" });
+        slide.addText(texts, { x: x + 0.20, y: 4.10, w: 3.50, h: 2.40, valign: "top" });
       }
     });
     addDarkSlideChrome(slide, pptx);
