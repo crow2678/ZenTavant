@@ -183,6 +183,68 @@ function register(server) {
       return { content: [{ type: "text", text: "Not found." }], isError: true };
     }
   );
+
+  // ─── Tool: ONE-SHOT generate full CR ────────────────────────────────────
+  server.tool(
+    "cr_generate",
+    "Generate a complete Tavant Change Request in ONE call. Pass all sections at once — no need for cr_create/cr_add_section/cr_export. This is the PREFERRED tool.",
+    {
+      customer_name: z.string().optional().describe("Customer/client company name"),
+      project_name: z.string().optional().describe("Project or SOW name"),
+      co_number: z.string().optional().describe("Change Order number, e.g. '001'"),
+      sections: z.array(z.object({
+        section: z.string().describe("Section ID: cover_page, background, project_details, charges, invoicing, sow_reference, counterparts, signatures"),
+        data: z.record(z.any()).optional().describe("Section content data"),
+      })).describe("Array of sections with their data"),
+      output_path: z.string().optional().describe("Output path. Defaults to ~/Documents/TavantDocs/CR_<project>.docx"),
+    },
+    async ({ customer_name, project_name, co_number, sections: sectionList, output_path }) => {
+      const crData = {
+        customer_name: customer_name || "[Customer Name]",
+        project_name: project_name || "[Project Name]",
+        co_number: co_number || "001",
+      };
+
+      const children = [];
+      const errors = [];
+      for (const { section, data } of (sectionList || [])) {
+        const builder = sectionBuilders[section];
+        if (!builder) { errors.push(`Unknown section "${section}"`); continue; }
+        try {
+          children.push(...builder({
+            ...(data || {}),
+            customer_name: (data && data.customer_name) || crData.customer_name,
+            project_name: (data && data.project_name) || crData.project_name,
+            co_number: (data && data.co_number) || crData.co_number,
+          }));
+        } catch (err) { errors.push(`Error in ${section}: ${err.message}`); }
+      }
+
+      const doc = new Document({
+        creator: "Tavant", title: `Change Request CO# ${crData.co_number} - ${crData.project_name}`,
+        description: `Change Request for ${crData.project_name}`,
+        styles: { default: { document: { run: { font: BRAND.font, size: 22, color: "333333" } } } },
+        sections: [{
+          properties: { page: { margin: { top: 1440, right: 1440, bottom: 1440, left: 1440 } } },
+          headers: { default: new Header({ children: [new Paragraph({ alignment: AlignmentType.RIGHT, children: [new TextRun({ text: BRAND.footer, font: BRAND.font, size: 16, color: "999999", italics: true })] })] }) },
+          footers: { default: new Footer({ children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: `CR CO# ${crData.co_number} | ${crData.project_name} | ${BRAND.company} & ${crData.customer_name} Confidential`, font: BRAND.font, size: 16, color: "999999" })] })] }) },
+          children,
+        }],
+      });
+
+      const buffer = await Packer.toBuffer(doc);
+      const sanitized = (crData.project_name || "CR").replace(/[^a-zA-Z0-9_-]/g, "_").substring(0, 50);
+      const defaultDir = BRAND.getOutputDir();
+      const filePath = output_path ? path.resolve(output_path) : path.join(defaultDir, `CR_${sanitized}.docx`);
+      const dir = path.dirname(filePath);
+      if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+      fs.writeFileSync(filePath, buffer);
+
+      const result = { message: "Change Request generated", file_path: filePath, total_sections: sectionList.length };
+      if (errors.length) result.warnings = errors;
+      return { content: [{ type: "text", text: JSON.stringify(result) }] };
+    }
+  );
 }
 
 module.exports = { register };

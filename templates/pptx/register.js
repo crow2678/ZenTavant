@@ -29,6 +29,97 @@ function addChromeToSlide(slide, isDark) {
   });
 }
 
+// ─── Shared element renderer (used by single + batch tools) ──────────────
+function addElementToSlide(slide, pptx, element_type, props) {
+  switch (element_type) {
+    case "text": {
+      const textContent = props.text || "";
+      const textOpts = {
+        x: props.x || 0, y: props.y || 0,
+        w: props.w || 4, h: props.h || 1,
+        fontSize: props.fontSize || 14,
+        color: props.color || "333333",
+        fontFace: props.fontFace || BRAND.font,
+        bold: props.bold || false,
+        italic: props.italic || false,
+        align: props.align || undefined,
+        valign: props.valign || undefined,
+        paraSpaceAfter: props.paraSpaceAfter || undefined,
+        lineSpacing: props.lineSpacing || undefined,
+      };
+      if (props.fill) textOpts.fill = { color: props.fill };
+      if (props.rectRadius) textOpts.rectRadius = props.rectRadius;
+      if (props.bullet) textOpts.bullet = props.bullet;
+      if (props.shape) textOpts.shape = props.shape;
+      slide.addText(textContent, textOpts);
+      break;
+    }
+    case "shape": {
+      const shapeType = pptx.ShapeType[props.shape || "rect"];
+      const shapeOpts = {
+        x: props.x || 0, y: props.y || 0,
+        w: props.w || 2, h: props.h || 2,
+      };
+      if (props.fill) shapeOpts.fill = { color: props.fill };
+      if (props.line) shapeOpts.line = props.line;
+      if (props.rectRadius) shapeOpts.rectRadius = props.rectRadius;
+      if (props.rotate) shapeOpts.rotate = props.rotate;
+      slide.addShape(shapeType, shapeOpts);
+      break;
+    }
+    case "chart": {
+      const chartTypeMap = {
+        bar: pptx.ChartType.bar, line: pptx.ChartType.line,
+        pie: pptx.ChartType.pie, doughnut: pptx.ChartType.doughnut,
+        area: pptx.ChartType.area,
+      };
+      const chartType = chartTypeMap[props.chartType || "bar"];
+      const chartOpts = {
+        x: props.x || 0.5, y: props.y || 1.5,
+        w: props.w || 6, h: props.h || 4,
+        showValue: props.showValue !== undefined ? props.showValue : true,
+        showLegend: props.showLegend || false,
+        legendPos: props.legendPos || "b",
+      };
+      if (props.chartColors) chartOpts.chartColors = props.chartColors;
+      slide.addChart(chartType, props.data || [], chartOpts);
+      break;
+    }
+    case "table": {
+      const tableOpts = {
+        x: props.x || 0.5, y: props.y || 1.5,
+        w: props.w || undefined, h: props.h || undefined,
+        fontSize: props.fontSize || 12,
+        color: props.color || "333333",
+        fontFace: BRAND.font,
+        autoPage: props.autoPage || false,
+      };
+      if (props.colW) tableOpts.colW = props.colW;
+      if (props.rowH) tableOpts.rowH = props.rowH;
+      if (props.border) tableOpts.border = props.border;
+      const rows = (props.rows || []).map((row, rowIdx) =>
+        row.map(cell => {
+          const isHeader = rowIdx === 0 && props.headerFill;
+          return {
+            text: String(cell),
+            options: {
+              fill: isHeader ? { color: props.headerFill } : undefined,
+              color: isHeader ? (props.headerColor || "FFFFFF") : props.color || "333333",
+              bold: isHeader ? true : false,
+              fontSize: props.fontSize || 12,
+              fontFace: BRAND.font,
+              valign: "middle",
+              margin: [4, 6, 4, 6],
+            },
+          };
+        })
+      );
+      slide.addTable(rows, tableOpts);
+      break;
+    }
+  }
+}
+
 function register(server) {
 
   // ─── Tool: list layouts ────────────────────────────────────────────────
@@ -206,119 +297,49 @@ TABLE: {x, y, w, h, rows (2D array of cell values), colW (array of column widths
       if (!slide) return { content: [{ type: "text", text: `Error: Slide ${slide_index} not found. Use pptx_add_custom_slide first.` }], isError: true };
 
       try {
-        switch (element_type) {
-          case "text": {
-            const textContent = props.text || "";
-            const textOpts = {
-              x: props.x || 0, y: props.y || 0,
-              w: props.w || 4, h: props.h || 1,
-              fontSize: props.fontSize || 14,
-              color: props.color || "333333",
-              fontFace: props.fontFace || BRAND.font,
-              bold: props.bold || false,
-              italic: props.italic || false,
-              align: props.align || undefined,
-              valign: props.valign || undefined,
-              paraSpaceAfter: props.paraSpaceAfter || undefined,
-              lineSpacing: props.lineSpacing || undefined,
-            };
-            if (props.fill) textOpts.fill = { color: props.fill };
-            if (props.rectRadius) textOpts.rectRadius = props.rectRadius;
-            if (props.bullet) textOpts.bullet = props.bullet;
-            if (props.shape) textOpts.shape = props.shape;
-
-            // Support rich text array: [{text, options}]
-            if (Array.isArray(textContent)) {
-              slide.addText(textContent, textOpts);
-            } else {
-              slide.addText(textContent, textOpts);
-            }
-            break;
-          }
-
-          case "shape": {
-            const shapeMap = {
-              rect: "rect", ellipse: "ellipse", roundRect: "roundRect",
-              line: "line", triangle: "triangle", diamond: "diamond",
-            };
-            const pptx = pres.pptx;
-            const shapeType = pptx.ShapeType[props.shape || "rect"];
-            const shapeOpts = {
-              x: props.x || 0, y: props.y || 0,
-              w: props.w || 2, h: props.h || 2,
-            };
-            if (props.fill) shapeOpts.fill = { color: props.fill };
-            if (props.line) shapeOpts.line = props.line;
-            if (props.rectRadius) shapeOpts.rectRadius = props.rectRadius;
-            if (props.rotate) shapeOpts.rotate = props.rotate;
-            slide.addShape(shapeType, shapeOpts);
-            break;
-          }
-
-          case "chart": {
-            const pptx = pres.pptx;
-            const chartTypeMap = {
-              bar: pptx.ChartType.bar,
-              line: pptx.ChartType.line,
-              pie: pptx.ChartType.pie,
-              doughnut: pptx.ChartType.doughnut,
-              area: pptx.ChartType.area,
-            };
-            const chartType = chartTypeMap[props.chartType || "bar"];
-            const chartOpts = {
-              x: props.x || 0.5, y: props.y || 1.5,
-              w: props.w || 6, h: props.h || 4,
-              showValue: props.showValue !== undefined ? props.showValue : true,
-              showLegend: props.showLegend || false,
-              legendPos: props.legendPos || "b",
-            };
-            if (props.chartColors) chartOpts.chartColors = props.chartColors;
-            slide.addChart(chartType, props.data || [], chartOpts);
-            break;
-          }
-
-          case "table": {
-            const tableOpts = {
-              x: props.x || 0.5, y: props.y || 1.5,
-              w: props.w || undefined,
-              h: props.h || undefined,
-              fontSize: props.fontSize || 12,
-              color: props.color || "333333",
-              fontFace: BRAND.font,
-              autoPage: props.autoPage || false,
-            };
-            if (props.colW) tableOpts.colW = props.colW;
-            if (props.rowH) tableOpts.rowH = props.rowH;
-            if (props.border) tableOpts.border = props.border;
-
-            const rows = (props.rows || []).map((row, rowIdx) =>
-              row.map(cell => {
-                const isHeader = rowIdx === 0 && props.headerFill;
-                return {
-                  text: String(cell),
-                  options: {
-                    fill: isHeader ? { color: props.headerFill } : undefined,
-                    color: isHeader ? (props.headerColor || "FFFFFF") : props.color || "333333",
-                    bold: isHeader ? true : false,
-                    fontSize: props.fontSize || 12,
-                    fontFace: BRAND.font,
-                    valign: "middle",
-                    margin: [4, 6, 4, 6],
-                  },
-                };
-              })
-            );
-            slide.addTable(rows, tableOpts);
-            break;
-          }
-        }
-
+        addElementToSlide(slide, pres.pptx, element_type, props);
         return {
           content: [{ type: "text", text: JSON.stringify({ message: `${element_type} element added to slide ${slide_index}` }) }],
         };
       } catch (err) {
         return { content: [{ type: "text", text: `Error adding element: ${err.message}` }], isError: true };
       }
+    }
+  );
+
+  // ─── Tool: BATCH add elements to a custom slide ──────────────────────────
+  server.tool(
+    "pptx_add_elements",
+    "Add MULTIPLE elements to a custom slide in ONE call. This is the PREFERRED tool for complex/dashboard slides — use this instead of calling pptx_add_element repeatedly. Pass an array of elements (shapes, text boxes, charts, tables) and they are all rendered in order.",
+    {
+      presentation_id: z.string().describe("The presentation ID"),
+      slide_index: z.number().describe("The slide_index from pptx_add_custom_slide"),
+      elements: z.array(z.object({
+        type: z.enum(["text", "shape", "chart", "table"]).describe("Element type"),
+        props: z.record(z.any()).describe("Element properties — same format as pptx_add_element props"),
+      })).describe("Array of elements to add. Each has {type, props}. Rendered in order (first = bottom layer)."),
+    },
+    async ({ presentation_id, slide_index, elements }) => {
+      const pres = presentations.get(presentation_id);
+      if (!pres) return { content: [{ type: "text", text: "Error: Presentation not found." }], isError: true };
+      const slide = pres.slides && pres.slides[slide_index];
+      if (!slide) return { content: [{ type: "text", text: `Error: Slide ${slide_index} not found. Use pptx_add_custom_slide first.` }], isError: true };
+
+      const errors = [];
+      let added = 0;
+      for (let i = 0; i < (elements || []).length; i++) {
+        const { type, props } = elements[i];
+        try {
+          addElementToSlide(slide, pres.pptx, type, props);
+          added++;
+        } catch (err) {
+          errors.push(`Element ${i} (${type}): ${err.message}`);
+        }
+      }
+
+      const result = { message: `${added} elements added to slide ${slide_index}`, total_elements: added };
+      if (errors.length) result.warnings = errors;
+      return { content: [{ type: "text", text: JSON.stringify(result) }] };
     }
   );
 
@@ -355,6 +376,60 @@ TABLE: {x, y, w, h, rows (2D array of cell values), colW (array of column widths
         return { content: [{ type: "text", text: "Presentation deleted." }] };
       }
       return { content: [{ type: "text", text: "Not found." }], isError: true };
+    }
+  );
+
+  // ─── Tool: ONE-SHOT generate full presentation ──────────────────────────
+  server.tool(
+    "pptx_generate",
+    "Generate a complete Tavant-branded PowerPoint presentation in ONE call. Pass all slides at once — no need for pptx_create/pptx_add_slide/pptx_export. This is the PREFERRED tool for creating presentations. Use pptx_list_layouts to see available layouts and fields.",
+    {
+      title: z.string().optional().describe("Presentation title"),
+      author: z.string().optional().describe("Author name"),
+      slides: z.array(z.object({
+        layout: z.string().describe("Layout ID: title_cover, agenda, breaker_ai, breaker_cloud, breaker_abstract, blank, title_only, title_only_dark, content_dark, content, title_subtitle, two_column, title_subtitle_content, multi_case_study, image_content_a, image_content_b, image_grid, three_column_images, chart, timeline_vertical, timeline_horizontal, multi_quote, thank_you"),
+        data: z.record(z.any()).describe("Slide content data — fields depend on layout. Use pptx_list_layouts to see fields."),
+      })).describe("Array of slides, each with a layout ID and data object"),
+      output_path: z.string().optional().describe("Output file path. Defaults to ~/Documents/TavantDocs/<title>.pptx"),
+    },
+    async ({ title, author, slides, output_path }) => {
+      const pptx = new PptxGenJS();
+      pptx.layout = "LAYOUT_WIDE";
+      pptx.title = title || "Tavant Presentation";
+      pptx.author = author || "Tavant";
+      pptx.company = "Tavant";
+
+      const errors = [];
+      let slideCount = 0;
+
+      for (const { layout, data } of (slides || [])) {
+        const builder = slideBuilders[layout];
+        if (!builder) {
+          errors.push(`Unknown layout "${layout}" — skipped. Available: ${Object.keys(LAYOUTS).join(", ")}`);
+          continue;
+        }
+        try {
+          builder(pptx, data || {});
+          slideCount++;
+        } catch (err) {
+          errors.push(`Error on slide ${slideCount + 1} (${layout}): ${err.message}`);
+        }
+      }
+
+      if (slideCount === 0) {
+        return { content: [{ type: "text", text: "Error: No valid slides to generate." }], isError: true };
+      }
+
+      const sanitized = (pptx.title || "presentation").replace(/[^a-zA-Z0-9_-]/g, "_").substring(0, 50);
+      const defaultDir = BRAND.getOutputDir();
+      const filePath = output_path ? path.resolve(output_path) : path.join(defaultDir, `${sanitized}.pptx`);
+      const dir = path.dirname(filePath);
+      if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+      await pptx.writeFile({ fileName: filePath });
+
+      const result = { message: "Presentation generated", file_path: filePath, total_slides: slideCount };
+      if (errors.length) result.warnings = errors;
+      return { content: [{ type: "text", text: JSON.stringify(result) }] };
     }
   );
 }

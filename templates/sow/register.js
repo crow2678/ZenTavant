@@ -177,6 +177,67 @@ function register(server) {
       return { content: [{ type: "text", text: "Not found." }], isError: true };
     }
   );
+
+  // ─── Tool: ONE-SHOT generate full SOW ───────────────────────────────────
+  server.tool(
+    "sow_generate",
+    "Generate a complete Tavant Statement of Work in ONE call. Pass all sections at once — no need for sow_create/sow_add_section/sow_export. This is the PREFERRED tool.",
+    {
+      project_name: z.string().optional().describe("Project name"),
+      client_name: z.string().optional().describe("Client company name"),
+      effective_date: z.string().optional().describe("SOW date"),
+      sections: z.array(z.object({
+        section: z.string().describe("Section ID: cover_page, overview, scope, approach, deliverables, timeline, team, pricing, assumptions, governance, acceptance, signatures"),
+        data: z.record(z.any()).optional().describe("Section content data"),
+      })).describe("Array of sections with their data"),
+      output_path: z.string().optional().describe("Output path. Defaults to ~/Documents/TavantDocs/SOW_<project>.docx"),
+    },
+    async ({ project_name, client_name, effective_date, sections: sectionList, output_path }) => {
+      const sowData = {
+        project_name: project_name || "[Project]",
+        client_name: client_name || "[Client]",
+        effective_date: effective_date || "[Date]",
+      };
+
+      const children = [];
+      const errors = [];
+      for (const { section, data } of (sectionList || [])) {
+        const builder = sectionBuilders[section];
+        if (!builder) { errors.push(`Unknown section "${section}"`); continue; }
+        try {
+          children.push(...builder({
+            ...(data || {}),
+            client_name: (data && data.client_name) || sowData.client_name,
+            effective_date: (data && data.effective_date) || sowData.effective_date,
+            project_name: (data && data.project_name) || sowData.project_name,
+          }));
+        } catch (err) { errors.push(`Error in ${section}: ${err.message}`); }
+      }
+
+      const doc = new Document({
+        creator: "Tavant", title: `SOW — ${sowData.project_name}`,
+        styles: { default: { document: { run: { font: BRAND.font, size: 22, color: "333333" } } } },
+        sections: [{
+          properties: { page: { margin: { top: 1440, right: 1440, bottom: 1440, left: 1440 } } },
+          headers: { default: new Header({ children: [new Paragraph({ alignment: AlignmentType.RIGHT, children: [new TextRun({ text: BRAND.footer, font: BRAND.font, size: 16, color: "999999", italics: true })] })] }) },
+          footers: { default: new Footer({ children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: `SOW: ${sowData.project_name} | ${sowData.client_name} | ${BRAND.company}`, font: BRAND.font, size: 16, color: "999999" })] })] }) },
+          children,
+        }],
+      });
+
+      const buffer = await Packer.toBuffer(doc);
+      const sanitized = (sowData.project_name || "sow").replace(/[^a-zA-Z0-9_-]/g, "_").substring(0, 50);
+      const defaultDir = BRAND.getOutputDir();
+      const filePath = output_path ? path.resolve(output_path) : path.join(defaultDir, `SOW_${sanitized}.docx`);
+      const dir = path.dirname(filePath);
+      if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+      fs.writeFileSync(filePath, buffer);
+
+      const result = { message: "SOW generated", file_path: filePath, total_sections: children.length > 0 ? sectionList.length : 0 };
+      if (errors.length) result.warnings = errors;
+      return { content: [{ type: "text", text: JSON.stringify(result) }] };
+    }
+  );
 }
 
 module.exports = { register };

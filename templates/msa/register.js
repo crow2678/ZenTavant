@@ -179,6 +179,65 @@ function register(server) {
       return { content: [{ type: "text", text: "Not found." }], isError: true };
     }
   );
+
+  // ─── Tool: ONE-SHOT generate full MSA ───────────────────────────────────
+  server.tool(
+    "msa_generate",
+    "Generate a complete Tavant MSA (Professional Services Agreement) in ONE call. Pass all sections at once — no need for msa_create/msa_add_section/msa_export. This is the PREFERRED tool.",
+    {
+      customer_name: z.string().optional().describe("Customer/client company name"),
+      effective_date: z.string().optional().describe("Agreement effective date"),
+      sections: z.array(z.object({
+        section: z.string().describe("Section ID: cover_page, preamble, definitions, professional_services, acceptance_and_fees, ownership, confidentiality, warranties, indemnification, limitation_of_liability, term_and_termination, general_provisions, signatures"),
+        data: z.record(z.any()).optional().describe("Section content data"),
+      })).describe("Array of sections with their data"),
+      output_path: z.string().optional().describe("Output path. Defaults to ~/Documents/TavantDocs/MSA_<customer>.docx"),
+    },
+    async ({ customer_name, effective_date, sections: sectionList, output_path }) => {
+      const msaData = {
+        customer_name: customer_name || "[Customer Name]",
+        effective_date: effective_date || "[Date]",
+      };
+
+      const children = [];
+      const errors = [];
+      for (const { section, data } of (sectionList || [])) {
+        const builder = sectionBuilders[section];
+        if (!builder) { errors.push(`Unknown section "${section}"`); continue; }
+        try {
+          children.push(...builder({
+            ...(data || {}),
+            customer_name: (data && data.customer_name) || msaData.customer_name,
+            effective_date: (data && data.effective_date) || msaData.effective_date,
+          }));
+        } catch (err) { errors.push(`Error in ${section}: ${err.message}`); }
+      }
+
+      const doc = new Document({
+        creator: "Tavant", title: `Professional Services Agreement - ${msaData.customer_name}`,
+        description: `MSA between Tavant Technologies, Inc. and ${msaData.customer_name}`,
+        styles: { default: { document: { run: { font: BRAND.font, size: 22, color: "333333" } } } },
+        sections: [{
+          properties: { page: { margin: { top: 1440, right: 1440, bottom: 1440, left: 1440 } } },
+          headers: { default: new Header({ children: [new Paragraph({ alignment: AlignmentType.RIGHT, children: [new TextRun({ text: "Tavant Technologies, Inc. Confidential", font: BRAND.font, size: 16, color: "999999", italics: true })] })] }) },
+          footers: { default: new Footer({ children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: `Professional Services Agreement | ${msaData.customer_name} | Tavant Technologies, Inc.`, font: BRAND.font, size: 16, color: "999999" })] })] }) },
+          children,
+        }],
+      });
+
+      const buffer = await Packer.toBuffer(doc);
+      const sanitized = (msaData.customer_name || "MSA").replace(/[^a-zA-Z0-9_-]/g, "_").substring(0, 50);
+      const defaultDir = BRAND.getOutputDir();
+      const filePath = output_path ? path.resolve(output_path) : path.join(defaultDir, `MSA_${sanitized}.docx`);
+      const dir = path.dirname(filePath);
+      if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+      fs.writeFileSync(filePath, buffer);
+
+      const result = { message: "MSA generated", file_path: filePath, total_sections: sectionList.length };
+      if (errors.length) result.warnings = errors;
+      return { content: [{ type: "text", text: JSON.stringify(result) }] };
+    }
+  );
 }
 
 module.exports = { register };

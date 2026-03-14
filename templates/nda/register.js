@@ -179,6 +179,65 @@ function register(server) {
       return { content: [{ type: "text", text: "Not found." }], isError: true };
     }
   );
+
+  // ─── Tool: ONE-SHOT generate full NDA ───────────────────────────────────
+  server.tool(
+    "nda_generate",
+    "Generate a complete Tavant Mutual NDA in ONE call. Pass all sections at once — no need for nda_create/nda_add_section/nda_export. This is the PREFERRED tool.",
+    {
+      company_name: z.string().optional().describe("The other party's company name"),
+      effective_date: z.string().optional().describe("NDA effective date"),
+      sections: z.array(z.object({
+        section: z.string().describe("Section ID: cover_page, preamble, proprietary_information, protection, exclusions, rights, legends, general_terms, term, entire_agreement, signatures"),
+        data: z.record(z.any()).optional().describe("Section content data"),
+      })).describe("Array of sections with their data"),
+      output_path: z.string().optional().describe("Output path. Defaults to ~/Documents/TavantDocs/NDA_<company>.docx"),
+    },
+    async ({ company_name, effective_date, sections: sectionList, output_path }) => {
+      const ndaData = {
+        company_name: company_name || "[Company Name]",
+        effective_date: effective_date || "[Date]",
+      };
+
+      const children = [];
+      const errors = [];
+      for (const { section, data } of (sectionList || [])) {
+        const builder = sectionBuilders[section];
+        if (!builder) { errors.push(`Unknown section "${section}"`); continue; }
+        try {
+          children.push(...builder({
+            ...(data || {}),
+            company_name: (data && data.company_name) || ndaData.company_name,
+            effective_date: (data && data.effective_date) || ndaData.effective_date,
+          }));
+        } catch (err) { errors.push(`Error in ${section}: ${err.message}`); }
+      }
+
+      const doc = new Document({
+        creator: "Tavant", title: `Mutual NDA - ${ndaData.company_name}`,
+        description: `Mutual Non-Disclosure Agreement between Tavant and ${ndaData.company_name}`,
+        styles: { default: { document: { run: { font: BRAND.font, size: 22, color: "333333" } } } },
+        sections: [{
+          properties: { page: { margin: { top: 1440, right: 1440, bottom: 1440, left: 1440 } } },
+          headers: { default: new Header({ children: [new Paragraph({ alignment: AlignmentType.RIGHT, children: [new TextRun({ text: BRAND.footer, font: BRAND.font, size: 16, color: "999999", italics: true })] })] }) },
+          footers: { default: new Footer({ children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: `Mutual NDA | ${ndaData.company_name} | ${BRAND.company}`, font: BRAND.font, size: 16, color: "999999" })] })] }) },
+          children,
+        }],
+      });
+
+      const buffer = await Packer.toBuffer(doc);
+      const sanitized = (ndaData.company_name || "NDA").replace(/[^a-zA-Z0-9_-]/g, "_").substring(0, 50);
+      const defaultDir = BRAND.getOutputDir();
+      const filePath = output_path ? path.resolve(output_path) : path.join(defaultDir, `NDA_${sanitized}.docx`);
+      const dir = path.dirname(filePath);
+      if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+      fs.writeFileSync(filePath, buffer);
+
+      const result = { message: "NDA generated", file_path: filePath, total_sections: sectionList.length };
+      if (errors.length) result.warnings = errors;
+      return { content: [{ type: "text", text: JSON.stringify(result) }] };
+    }
+  );
 }
 
 module.exports = { register };
